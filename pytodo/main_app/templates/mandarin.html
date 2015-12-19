@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru-ru">
+<head>
+    <meta charset="utf-8">
+    <title>Mandarin</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=PT+Sans' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    <link href='https://fonts.googleapis.com/css?family=Roboto+Condensed:400,700,300' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Roboto+Slab:400,300,700' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,400italic,500,700' rel='stylesheet' type='text/css'>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">
+            <img alt="logo" src="/static/img/mandarinni.png">
+        </div>
+        <div class="search">
+            <i class="icon fa fa-search"></i>
+            <input type="text" name="search" id="search" placeholder="Search">
+        </div>
+        <div class="user-block">
+            {% if request.user.is_authenticated %}
+                <div class="username">{{ request.user.username }}</div>
+                <a href="/logout/">
+                    <i class="icon fa fa-sign-out"></i>
+                </a>
+            {% else %}
+                <div class="username">Log in</div>
+
+                <a class="sign-in-show">
+                    <i class="icon fa fa-sign-in"></i>
+                </a>
+                <div class="sign-in-popup">
+                    <form action="/login/"  method="post">
+                        {% csrf_token %}
+                        <div class="table">
+                            <div>
+                                <label>Name:</label>
+                                <input type="text" name="username"/>
+                            </div>
+                            <div>
+                                <label>Password:</label>
+                                <input type="password" name="password"/>
+                            </div>
+                            <div>
+                                <label>Repeat:</label>
+                                <input type="password">
+                            </div>
+                        </div>
+                        <button type="submit">Войти</button>
+                    </form>
+                </div>
+            {% endif %}
+            <!--<a class="logout" href="#"></a>-->
+        </div>
+    </div>
+
+    <div class="main-content clearfix">
+        <div class="menu">
+            <ul class="menu-list">
+                <li>
+                    <a class="create" href="#"></a>
+
+                    <p class="block-to-show">Create</p>
+                </li>
+                <li>
+                    <a class="list active" href="#"></a>
+
+                    <p class="block-to-show">All tasks</p>
+                </li>
+                <li>
+                    <a class="done" href="#"></a>
+
+                    <p class="block-to-show">Done</p>
+                </li>
+                <li>
+                    <a class="invite" href="#"></a>
+
+                    <p class="block-to-show">Add friends</p>
+                </li>
+            </ul>
+        </div>
+
+        <div class="list-window">
+            <div class="top-container clearfix">
+                <p class="top-container-title">All tasks</p>
+
+                <div class="sort-block">
+                    <p>Sort by</p>
+                    <select>
+                        <option value="dt">
+                            date
+                        </option>
+                        <option value="imp">
+                            importance
+                        </option>
+                    </select>
+                </div>
+            </div>
+            <div class="task-container">
+                <!--Обход всех списков-->
+                {% for list in lists %}
+                <div class="task-item" data-list-id="{{ list.id }}">
+                    <div class="task-title">{{ list.title }}</div>
+                    <div class="task-date">
+                        11.11.2015
+                    </div>
+                    <!--Максимально 63 символа в таске для отображения -->
+                    <div class="tasks"></div>
+
+                    <div class="tasks-hidden">
+                        <!--Активные задания -->
+                        <div class="tasks">
+                            {% for task in list.task_set.all %}
+                                {% if not task.is_done %}
+                                <div class="task">
+                                    <i class="icon fa fa-square-o"></i>
+
+                                    <div contenteditable="true" class="task-descr" >{{ task.text }}</div>
+                                    <i class="delete-icon fa fa-times-circle"></i>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <!--Выполненные задания -->
+                        <div class="tasks-done">
+                            {% for task in list.task_set.all %}
+                            {% if task.is_done %}
+                                <div class="task">
+                                    <i class="icon fa fa-check-square-o"></i>
+
+                                    <div contenteditable="true" class="task-descr" >{{ task.text }}</div>
+                                    <i class="delete-icon fa fa-times-circle"></i>
+                                </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="author-and-icons">
+                        <div class="task-author">{{ list.author }}</div>
+                        <div class="task-block">
+                            <a class="icon task-remove" href="#"></a>
+                        </div>
+                    </div>
+
+                </div>
+                {% endfor %}
+{#                </c:forEach>#}
+            </div>
+        </div>
+
+        <div class="edit-window">
+            <div class="top-container clearfix">
+                <div class="edit-head">
+                    <input id="list-title" type="text" value="" placeholder="Название списка">
+
+                    <div class="task-date">
+                        11.11.2015
+                    </div>
+                </div>
+            </div>
+
+            <div class="edit-container">
+                <div class="tasks"></div>
+                <div class="add-task">
+                    <i class="icon fa fa-plus"></i>
+                    <span>Новое задание</span>
+                </div>
+                <div class="tasks-done"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="/static/js/jquery-2.1.4.js"></script>
+<script type="text/javascript" src="/static/js/tasks.js"></script>
+</body>
+</html>
