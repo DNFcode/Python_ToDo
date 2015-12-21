@@ -35,6 +35,47 @@ max_visible_task_length = 28;
 
 $(document).ready(function(){
 
+    function update_active_on_server(){
+        var $task = $(".task-item.active");
+        if($task.length != 0) {
+            var id = $task.attr("data-list-id");
+            var title = $task.find(".task-title").text();
+            var tasks = $task.find(".tasks-hidden .tasks .task");
+            var tasks_done = $task.find(".tasks-hidden .tasks-done .task");
+
+            var tsks = [];
+            tasks.each(function () {
+                tsks.push({"text": $(this).find(".task-descr").text(), "is_done": false})
+            });
+
+            var tsks_done = [];
+            tasks_done.each(function () {
+                tsks_done.push({"text": $(this).find(".task-descr").text(), "is_done": true})
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "/list/update/",
+                data: {
+                    "csrfmiddlewaretoken": $("#csrf-token").val(),
+                    "data": JSON.stringify({
+                        "id": id,
+                        "is_public": false,
+                        "title": title,
+                        "tasks": tsks.concat(tsks_done)
+                    })
+                }
+            });
+        }
+    }
+
+    //var interval_passed = true;
+    //$(".edit-window").on("input", function () {
+    //    if (! interval_passed){
+    //        $()
+    //    }
+    //});
+
     //Появление окна входа
     $(".sign-in-show").click(function(){
         $('.sign-in-popup').addClass("show");
@@ -167,6 +208,7 @@ $(document).ready(function(){
     //Переключение активных тасков
     $(".task-container").on("click", ".task-item", function(){
         if(!$(this).hasClass("active")){
+            update_active_on_server();
             if(($(".task-item.active .tasks").html() == "") && ($(".task-item.active .tasks-hidden .tasks-done").html() == "")){
                 $(".task-item.active").remove();
             } else{
@@ -199,7 +241,7 @@ $(document).ready(function(){
 
     //Очистка полей ввода при нажатии на кнопку Create
     $(".create").on("click", function(){
-        $("#task-title").val("");
+        $("#list-title").val("");
         $(".edit-container .tasks-done").html("");
         $(".edit-container .tasks").html("");
 
@@ -214,6 +256,17 @@ $(document).ready(function(){
         $(".task-item:first-child .task-title").text("Название списка");
 
         $(".task-item:first-child .author-and-icons .task-author").text($(".user-block .username").text());
+
+        $.ajax({
+            type: "POST",
+            url: "/list/new/",
+            data: {
+                "csrfmiddlewaretoken": $("#csrf-token").val()
+            },
+            success: function(id){
+                $(".task-item.active").attr("data-list-id", id);
+            }
+        });
     });
 
     //Добавление новых пунктов в таски
@@ -226,8 +279,20 @@ $(document).ready(function(){
     });
 
     //Удаление активного таска
-    $(".task-container").on("click", ".task-item.active .icon.task-remove", function(){
-        $(".task-item.active").remove();
+    $(".task-container").on("click", ".task-item .icon.task-remove", function(){
+        var id = $(this).parents(".task-item").attr('data-list-id');
+        var $task = $(this).parents(".task-item");
+        $.ajax({
+            type: "POST",
+            url: "/list/delete/",
+            data: {
+                "csrfmiddlewaretoken": $("#csrf-token").val(),
+                "id": id
+            },
+            success: function(){
+                $task.remove();
+            }
+        });
     });
 
     //Удаление задания из списка

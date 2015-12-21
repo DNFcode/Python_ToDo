@@ -23,5 +23,8 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^$', main_page),
     url(r'^login/', log_in),
-    url(r'^logout/', log_out)
+    url(r'^logout/', log_out),
+    url(r'^list/update/', update_list),
+    url(r'^list/new/', new_list),
+    url(r'^list/delete/', delete_list)
 ]
