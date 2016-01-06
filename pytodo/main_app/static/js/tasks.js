@@ -23,64 +23,306 @@ html = {
 
             '<div class="author-and-icons">'+
                 '<div class="task-author"></div>'+
-                '<div class="task-block">'+
-                    '<a class="icon task-remove" href="#"></a>'+
+                '<div class="task-block">' +
+                    '<i class="icon users fa fa-users"></i> '+
+                    '<i class="icon delete fa fa-trash"></i> '+
+                    '<i class="icon fa un-archive fa-caret-square-o-up"></i> '+
+                    '<i class="icon fa archive fa-caret-square-o-down"></i> '+
                 '</div>'+
             '</div>'+
-        '</div>'
+        '</div>',
+
+    user:
+        '<div class="user">' +
+            '<span class="user-name"></span> ' +
+            '<div><i class="icon edit fa fa-pencil"></i>' +
+            '<i class="icon remove-user fa fa-times"></i></div> ' +
+        '</div>',
+
+    user_found:
+        '<div class="user"></div>'
 };
 
 max_tasks = 3;
 max_visible_task_length = 28;
+server_data = {};
 
 $(document).ready(function(){
 
-    function update_active_on_server(){
-        var $task = $(".task-item.active");
-        if($task.length != 0) {
-            var id = $task.attr("data-list-id");
-            var title = $task.find(".task-title").text();
-            var tasks = $task.find(".tasks-hidden .tasks .task");
-            var tasks_done = $task.find(".tasks-hidden .tasks-done .task");
+    //===============Рашаривание заданий==============
+    $(".users-popup").hide();
 
-            var tsks = [];
-            tasks.each(function () {
-                tsks.push({"text": $(this).find(".task-descr").text(), "is_done": false})
-            });
+    $('.users-search').keyup(function() {
+        clearTimeout($.data(this, 'timer'));
+        $(".found-users .user").remove();
+        $(".no-users-found").hide();
+        $(".loading").show();
+        var wait = setTimeout(search, 500);
+        $(this).data('timer', wait);
+    });
 
-            var tsks_done = [];
-            tasks_done.each(function () {
-                tsks_done.push({"text": $(this).find(".task-descr").text(), "is_done": true})
-            });
-
+    function search(){
+        var username = $('.users-search').val();
+        $(".no-users-found").text("Пользователи не найдены");
+        if (username.length > 1) {
+            $(".loading").hide();
             $.ajax({
                 type: "POST",
-                url: "/list/update/",
+                dataType: "json",
+                url: "/list/users/find/",
                 data: {
                     "csrfmiddlewaretoken": $("#csrf-token").val(),
-                    "data": JSON.stringify({
-                        "id": id,
-                        "is_public": false,
-                        "title": title,
-                        "tasks": tsks.concat(tsks_done)
-                    })
+                    "user": username
+                },
+                success: function (users) {
+                    if (users.length == 0)
+                        $(".no-users-found").show();
+                    else{
+                        for(var i = 0; i<users.length; i++){
+                            if ($(".added-users .user span:contains('" + users[i]["user"] + "')")) {
+                                var $user = $($.parseHTML(html.user_found));
+                                $user.text(users[i]["user"]);
+                                $(".found-users").append($user);
+                            }
+                        }
+                    }
+                }
+            })
+        }
+        else{
+            $(".no-users-found").text("Введите минимум 2 символа");
+            $(".no-users-found").show();
+            $(".loading").hide();
+        }
+    }
+
+    $(".task-container").on("click", ".icon.users", function(event){
+        event.stopPropagation();
+        $(".users-popup .added-users").off("click", ".edit");
+        $(".found-users").off("click", ".user");
+        var $task = $(this).parents(".task-item");
+        var offset = $(this).offset();
+        var $popup = $(".users-popup");
+        var height = $(window).height();
+        if (offset.top + 200 > height)
+            offset.top -= 200;
+        $popup.offset(offset).show();
+        $popup.find(".added-users").html("");
+        var id = $task.attr('data-list-id');
+
+        $(".found-users").on("click", ".user", function () {
+            var user = $(this).text();
+            var $user = $(this);
+            $.ajax({
+                type: "POST",
+                url: "/list/users/change_list_users/",
+                data: {
+                    "csrfmiddlewaretoken": $("#csrf-token").val(),
+                    "id": id,
+                    "user": user
+                },
+                success: function () {
+                    $user.remove();
+                    var $user_new = $($.parseHTML(html.user));
+                    $user_new.find(".user-name").text(user);
+                    $popup.find(".added-users").append($user_new);
+                }
+            })
+        });
+
+        $(".users-popup .added-users").on("click", ".remove-user", function(){
+            var name = $(this).parents(".user").find(".user-name").text();
+            var $user = $(this).parents(".user");
+            $.ajax({
+                type: "POST",
+                url: "/list/users/change_list_users/",
+                data:{
+                    "csrfmiddlewaretoken": $("#csrf-token").val(),
+                    "id": id,
+                    "user": name
+                },
+                success: function () {
+                    $user.remove();
+                }
+            })
+        });
+
+        $(".users-popup .added-users").on("click", ".edit", function(){
+            var name = $(this).parents(".user").find(".user-name").text();
+            var pen = $(this);
+            $.ajax({
+                type: "POST",
+                url: "/list/users/change_edit_rights/",
+                data:{
+                    "csrfmiddlewaretoken": $("#csrf-token").val(),
+                    "id": id,
+                    "user": name
+                },
+                success: function () {
+                    pen.toggleClass("permitted");
+                }
+            })
+        });
+
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            url: "/list/users/all/",
+            data: {
+                "csrfmiddlewaretoken": $("#csrf-token").val(),
+                "id": id
+            },
+            success: function (users) {
+                for(var i = 0; i<users.length; i++){
+                    var $user = $($.parseHTML(html.user));
+                    $user.find(".user-name").text(users[i]["user"]);
+                    if(users[i]["edit"])
+                        $user.find(".icon.edit").addClass("permitted");
+                    $popup.find(".added-users").append($user);
+                }
+            }
+        })
+    });
+
+
+
+    $(".users-popup .user-add").click(function(){
+        $(".users-popup .users-add-search").animate({width:'toggle'},350);
+    });
+
+    $(".users-popup").click(function(event){
+        event.stopPropagation();
+    });
+    //================================================
+
+
+    function init_server_data(){
+        $(".task-item").each(function(){
+            var id = $(this).attr("data-list-id");
+            server_data[id] = $(this).html();
+        })
+    }
+    //============Архивация заданий============
+    function archive_list($task, $container){
+        if($task.length > 0) {
+            var id = $task.attr('data-list-id');
+            $.ajax({
+                type: "POST",
+                url: "/list/archive/",
+                data: {
+                    "csrfmiddlewaretoken": $("#csrf-token").val(),
+                    "id": id
+                },
+                success: function () {
+                    $.when($task.slideUp(500)).then(function(){
+                        $container.prepend($task);
+                        $task.show();
+                    });
                 }
             });
         }
     }
 
-    //var interval_passed = true;
-    //$(".edit-window").on("input", function () {
-    //    if (! interval_passed){
-    //        $()
-    //    }
-    //});
+    $(".task-container").on("click", ".icon.archive", function(event){
+        event.stopPropagation();
+        var $task = $(this).parents(".task-item");
+        archive_list($task, $(".task-container.archived"));
+    });
 
+    $(".task-container").on("click", ".icon.un-archive", function(event){
+        event.stopPropagation();
+        var $task = $(this).parents(".task-item");
+        archive_list($task, $(".task-container:not(.archived)"));
+    });
+
+    $(".menu-list .done").click(function(){
+        $(".task-container:not(.archived)").hide();
+        $(".task-container.archived").show();
+        $(".list-window").addClass("archived");
+    });
+
+    $(".menu-list .list").click(function(){
+        $(".task-container:not(.archived)").show();
+        $(".task-container.archived").hide();
+        $(".list-window").removeClass("archived");
+    });
+
+    //=========================================
+
+    //==============Публикация списков=========
+    function toggle_list_public($task){
+        if($task.length > 0) {
+            var id = $task.attr('data-list-id');
+            $.ajax({
+                type: "POST",
+                url: "/list/make_public/",
+                data: {
+                    "csrfmiddlewaretoken": $("#csrf-token").val(),
+                    "id": id
+                },
+                success: function () {
+                    $task.find(".icon.share").toggleClass("shared");
+                }
+            });
+        }
+    }
+
+    $(".task-container").on("click", ".icon.share", function(event){
+        event.stopPropagation();
+        var $task = $(this).parents(".task-item");
+        toggle_list_public($task);
+    });
+    //=========================================
+
+    //Обновление данных в текущем активном списке заданий на сервере
+    function update_active_on_server(){
+        var $task = $(".task-item.active");
+        if($task.length != 0) {
+            var id = $task.attr("data-list-id");
+            if(server_data[id] != $task.html()) {
+                var title = $task.find(".task-title").text();
+                var tasks = $task.find(".tasks-hidden .tasks .task");
+                var tasks_done = $task.find(".tasks-hidden .tasks-done .task");
+
+                var tsks = [];
+                tasks.each(function () {
+                    tsks.push({"text": $(this).find(".task-descr").text(), "is_done": false})
+                });
+
+                var tsks_done = [];
+                tasks_done.each(function () {
+                    tsks_done.push({"text": $(this).find(".task-descr").text(), "is_done": true})
+                });
+
+                $.ajax({
+                    type: "POST",
+                    url: "/list/update/",
+                    data: {
+                        "csrfmiddlewaretoken": $("#csrf-token").val(),
+                        "data": JSON.stringify({
+                            "id": id,
+                            "is_public": false,
+                            "title": title,
+                            "tasks": tsks.concat(tsks_done)
+                        })
+                    },
+                    success: function(){
+                        server_data[id] = $task.html();
+                    }
+                });
+            }
+        }
+    }
+
+    setInterval(update_active_on_server, 2000);
+
+    //====================Окно входа======================
     //Появление окна входа
     $(".sign-in-show").click(function(){
         $('.sign-in-popup').addClass("show");
     });
 
+    //Скрытие окна входа
     $(".sign-in-popup").click(function(){
         $(".sign-in-popup").removeClass("show");
     });
@@ -110,13 +352,29 @@ $(document).ready(function(){
 
     //Проверка перед отправкой
     $(".sign-in-popup button").click(function(event){
-        var inputs = $(".sign-in-popup input[type='password']");
-        if (inputs.hasClass('valid')){
-            return
-        }
+        if($(".sign-in-popup form").attr("action") == "/registration/") {
+            var inputs = $(".sign-in-popup input[type='password']");
+            if (inputs.hasClass('valid')) {
+                return
+            }
 
-        event.preventDefault();
+            event.preventDefault();
+        }
     });
+
+    $(".registration-link").click(function(){
+        $(".sign-in-popup .registration").toggle(0,function() {
+            if ($(this).is(':visible'))
+                $(this).css('display','table-row');
+        });
+        var $form = $(".sign-in-popup form");
+        var url = $form.attr("action");
+        $form.attr("action", url == "/login/" ? "/registration/": "/login/");
+        $form.find("input[type='email']").prop('disabled', function(i, v) { return !v; });
+        $(this).text($(this).text() == "Регистрация" ? "Вход": "Регистрация");
+        $(this).next().text($(this).next().text() == "Зарегистрироваться" ? "Войти": "Зарегистрироваться");
+    });
+    //====================================================
 
     $('.task-container .task-item').each(function(){
         if($(this).find('.tasks-hidden .tasks .task').length == 0){
@@ -156,6 +414,7 @@ $(document).ready(function(){
         });
     }
 
+    //Показать таски в списке всех листов
     function show_visible_tasks(){
         if($('.task-container .task-item.active .tasks-hidden .tasks .task').length == 0){
             //Первые три таска из task-hidden tasks-done
@@ -190,6 +449,7 @@ $(document).ready(function(){
         }
     }
 
+    //Активный таск переносится в редактор
     function refresh_active(){
         var taskDescr = $(".task-item.active .tasks-hidden .tasks");
         taskDescr.html($(".edit-container .tasks").html());
@@ -209,6 +469,7 @@ $(document).ready(function(){
     $(".task-container").on("click", ".task-item", function(){
         if(!$(this).hasClass("active")){
             update_active_on_server();
+            delete_active_if_empty();
             if(($(".task-item.active .tasks").html() == "") && ($(".task-item.active .tasks-hidden .tasks-done").html() == "")){
                 $(".task-item.active").remove();
             } else{
@@ -222,6 +483,14 @@ $(document).ready(function(){
             $(".edit-window .tasks-done").html(taskDone);
             taskTitle = $(this).find(".task-title").text();
             $("#list-title").val(taskTitle);
+            $(".edit-head .task-date").text($(".task-item.active .task-date").text());
+            $("#list-title").prop('disabled', false);
+            $(".add-task").show();
+            if (!$(this).hasClass("editable")){
+                $(".add-task").hide();
+                $(".edit-window .task-descr").attr("contenteditable", "false");
+                $("#list-title").prop('readonly', true);
+            }
         }
     });
 
@@ -239,23 +508,58 @@ $(document).ready(function(){
         show_visible_tasks();
     });
 
-    //Очистка полей ввода при нажатии на кнопку Create
+    function delete_task($task){
+        if($task.length > 0) {
+            var id = $task.attr('data-list-id');
+            $.ajax({
+                type: "POST",
+                url: "/list/delete/",
+                data: {
+                    "csrfmiddlewaretoken": $("#csrf-token").val(),
+                    "id": id
+                },
+                success: function () {
+                    $task.remove();
+                    delete server_data[id];
+                }
+            });
+        }
+    }
+
+    function delete_active_if_empty(){
+        if ($(".task-item.active .tasks-hidden .tasks").children().length == 0 &&
+            $(".task-item.active .tasks-hidden .tasks-done").children().length == 0){
+            delete_task($(".task-item.active"));
+        }
+    }
+
+    //Очистка полей ввода при нажатии на кнопку Create и создание нового списка
     $(".create").on("click", function(){
         $("#list-title").val("");
         $(".edit-container .tasks-done").html("");
         $(".edit-container .tasks").html("");
 
-        if(($(".task-item.active .tasks").html() == "") && ($(".task-item.active .tasks-hidden .tasks-done").html() == "")){
-            $(".task-item.active").remove();
-        }
+        delete_active_if_empty();
 
-        $(".task-container").prepend(html.new_task);
+        $(".task-container:not(.archived)").show();
+        $(".task-container.archived").hide();
+
+        $(".task-container:not(.archived)").prepend(html.new_task);
         $(".task-item.active").removeClass("active");
-        $(".task-container .task-item:first-child").addClass("active");
+        $(".task-container:not(.archived) .task-item:first-child").addClass("active");
 
         $(".task-item:first-child .task-title").text("Название списка");
 
         $(".task-item:first-child .author-and-icons .task-author").text($(".user-block .username").text());
+
+        var d = new Date();
+        var day = ('0' + d.getDate()).slice(-2);
+        var month = ('0' + d.getMonth() + 1).slice(-2);
+        var year = d.getFullYear();
+        $(".task-item:first-child .task-date").text(day + "." + month + "." + year);
+        $(".edit-head .task-date").text(day + "." + month + "." + year);
+
+        var $new_task = $(".task-item.active");
 
         $.ajax({
             type: "POST",
@@ -264,42 +568,66 @@ $(document).ready(function(){
                 "csrfmiddlewaretoken": $("#csrf-token").val()
             },
             success: function(id){
-                $(".task-item.active").attr("data-list-id", id);
+                $new_task.attr("data-list-id", id);
+                server_data[id] = $new_task.html();
             }
         });
     });
 
-    //Добавление новых пунктов в таски
-    $(".edit-container .add-task").on("click", function() {
-        last_task = $(".edit-container .tasks .task:last-of-type div");
-        if((last_task.length == 0) || (last_task.text() != "")){
-            $(".edit-container .tasks").append(html.task);
-            $(".edit-container .tasks .task:last-of-type div").focus();
+    //==============Добавление новых пунктов в таски============
+    function new_task(){
+        event.stopPropagation();
+        var $task_descr = $('.edit-window .tasks .task:last-of-type .task-descr');
+        if ($task_descr.text() != "" || $task_descr.length == 0) {
+            $('.edit-window .tasks').append(html.task);
+        }
+        $task_descr = $($task_descr.selector);
+        $task_descr.focus();
+    }
+
+    //При клике на добавление задания
+    $('.edit-container .add-task').click(new_task);
+
+    //При нажатии на Enter
+    $('.edit-window .tasks').on('keypress', '.task-descr', function(event){
+        var $last_task_descr = $('.edit-window .tasks .task:last-of-type .task-descr');
+        if (event.which == 13) {
+            if ($last_task_descr[0] == $(this)[0]) {
+                event.preventDefault();
+                new_task(event);
+            } else {
+                event.preventDefault();
+                $(this).parent().next().find('.task-descr').focus();
+            }
         }
     });
 
+    //Удаление пунктов при нажатии вне таска
+    $('body').click(function () {
+        var $task_descr = $('.edit-window .tasks .task:last-of-type .task-descr');
+        if ($task_descr.text() == ""){
+            $task_descr.parent().remove();
+        }
+        $(".users-popup").offset({top:0, left:0}).hide();
+        $(".users-popup .users-add-search").hide();
+        $(".no-users-found").hide();
+        $(".loading").hide();
+        $(".users-search").val("");
+    });
+    //==========================================================
+
+
     //Удаление активного таска
-    $(".task-container").on("click", ".task-item .icon.task-remove", function(){
-        var id = $(this).parents(".task-item").attr('data-list-id');
-        var $task = $(this).parents(".task-item");
-        $.ajax({
-            type: "POST",
-            url: "/list/delete/",
-            data: {
-                "csrfmiddlewaretoken": $("#csrf-token").val(),
-                "id": id
-            },
-            success: function(){
-                $task.remove();
-            }
-        });
+    $(".task-container").on("click", ".icon.delete", function(event){
+        event.stopPropagation();
+        delete_task($(this).parents(".task-item"));
     });
 
     //Удаление задания из списка
     $(".edit-container").on("click", ".delete-icon", function(){
         $(this).parent().remove();
 
-        refresh_active()
+        refresh_active();
 
         show_visible_tasks()
     });
@@ -329,4 +657,6 @@ $(document).ready(function(){
 
         show_visible_tasks();
     });
-})
+
+    init_server_data();
+});

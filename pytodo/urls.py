@@ -26,5 +26,11 @@ urlpatterns = [
     url(r'^logout/', log_out),
     url(r'^list/update/', update_list),
     url(r'^list/new/', new_list),
-    url(r'^list/delete/', delete_list)
+    url(r'^list/delete/', delete_list),
+    url(r'^list/archive/', archive_list),
+    url(r'^list/make_public/', make_list_public),
+    url(r'^list/users/all/', get_list_users),
+    url(r'^list/users/change_edit_rights/', change_edit_rights),
+    url(r'^list/users/find/', find_users),
+    url(r'^list/users/change_list_users/', change_list_users)
 ]

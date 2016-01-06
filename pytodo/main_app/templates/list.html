@@ -1,0 +1,53 @@
+<div class="task-item {% if list.editable %} editable {% endif %}" data-list-id="{{ list.id }}">
+    <div class="task-title">{{ list.title }}</div>
+    <div class="task-date">
+        {{ list.date_formatted }}
+    </div>
+    <!--Максимально 63 символа в таске для отображения -->
+    <div class="tasks"></div>
+
+    <div class="tasks-hidden">
+        <!--Активные задания -->
+        <div class="tasks">
+            {% for task in list.task_set.all %}
+                {% if not task.is_done %}
+                    <div class="task">
+                        <i class="icon fa fa-square-o"></i>
+
+                        <div contenteditable="true" class="task-descr">{{ task.text }}</div>
+                        <i class="delete-icon fa fa-times-circle"></i>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <!--Выполненные задания -->
+        <div class="tasks-done">
+            {% for task in list.task_set.all %}
+                {% if task.is_done %}
+                    <div class="task">
+                        <i class="icon fa fa-check-square-o"></i>
+
+                        <div contenteditable="true" class="task-descr">{{ task.text }}</div>
+                        <i class="delete-icon fa fa-times-circle"></i>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="author-and-icons">
+        <div class="task-author">{{ list.author }}</div>
+        <div class="task-block">
+            {% if list.author == request.user %}
+                <i class="icon users fa fa-users"></i>
+                <i class="icon delete fa fa-trash"></i>
+                <i class="icon fa un-archive fa-caret-square-o-up"></i>
+                <i class="icon fa archive fa-caret-square-o-down"></i>
+            {% endif %}
+            {% if request.user.is_superuser %}
+                <i class="icon share {% if list.is_public %} shared {% endif %} fa fa-share-square-o"></i>
+            {% endif %}
+        </div>
+    </div>
+
+</div>

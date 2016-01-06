@@ -37,19 +37,24 @@
                     <form action="/login/"  method="post">
                         {% csrf_token %}
                         <div class="table">
-                            <div>
+                            <div class="login">
                                 <label>Name:</label>
                                 <input type="text" name="username"/>
                             </div>
-                            <div>
+                            <div class="registration">
+                                <label>Email:</label>
+                                <input type="email" name="email" disabled>
+                            </div>
+                            <div class="login">
                                 <label>Password:</label>
                                 <input type="password" name="password"/>
                             </div>
-                            <div>
+                            <div class="registration">
                                 <label>Repeat:</label>
                                 <input type="password">
                             </div>
                         </div>
+                        <a class="registration-link">Регистрация</a>
                         <button type="submit">Войти</button>
                     </form>
                 </div>
@@ -103,60 +108,25 @@
             <div class="task-container">
                 <!--Обход всех списков-->
                 {% for list in lists %}
-                <div class="task-item" data-list-id="{{ list.id }}">
-                    <div class="task-title">{{ list.title }}</div>
-                    <div class="task-date">
-                        11.11.2015
-                    </div>
-                    <!--Максимально 63 символа в таске для отображения -->
-                    <div class="tasks"></div>
-
-                    <div class="tasks-hidden">
-                        <!--Активные задания -->
-                        <div class="tasks">
-                            {% for task in list.task_set.all %}
-                                {% if not task.is_done %}
-                                <div class="task">
-                                    <i class="icon fa fa-square-o"></i>
-
-                                    <div contenteditable="true" class="task-descr" >{{ task.text }}</div>
-                                    <i class="delete-icon fa fa-times-circle"></i>
-                                </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                        <!--Выполненные задания -->
-                        <div class="tasks-done">
-                            {% for task in list.task_set.all %}
-                            {% if task.is_done %}
-                                <div class="task">
-                                    <i class="icon fa fa-check-square-o"></i>
-
-                                    <div contenteditable="true" class="task-descr" >{{ task.text }}</div>
-                                    <i class="delete-icon fa fa-times-circle"></i>
-                                </div>
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div class="author-and-icons">
-                        <div class="task-author">{{ list.author }}</div>
-                        <div class="task-block">
-                            <a class="icon task-remove" href="#"></a>
-                        </div>
-                    </div>
-
-                </div>
+                    {% if not list.is_archived %}
+                        {% include "list.html" with list=list %}
+                    {% endif %}
                 {% endfor %}
-{#                </c:forEach>#}
+            </div>
+
+            <div class="task-container archived">
+                {% for list in lists %}
+                    {% if list.is_archived %}
+                        {% include "list.html" with list=list request=request%}
+                    {% endif %}
+                {% endfor %}
             </div>
         </div>
 
         <div class="edit-window">
             <div class="top-container clearfix">
                 <div class="edit-head">
-                    <input id="list-title" type="text" value="" placeholder="Название списка">
+                    <input id="list-title" type="text" value="" placeholder="Название списка" maxlength="40">
 
                     <div class="task-date">
                         11.11.2015
@@ -177,5 +147,25 @@
 </div>
 <script type="text/javascript" src="/static/js/jquery-2.1.4.js"></script>
 <script type="text/javascript" src="/static/js/tasks.js"></script>
+
+<div class="users-popup">
+    <div class="users-permitted">
+        <div class="user-add">
+            <i class="fa fa-plus"></i>
+            <span>Добавить пользователя</span>
+        </div>
+        <div class="added-users"></div>
+    </div>
+    <div class="users-add-search">
+        <input class="users-search" type="text" placeholder="Начните поиск">
+        <div class="found-users">
+            <div class="no-users-found">
+                Пользователи не найдены
+            </div>
+            <img class="loading" src="/static/img/load.gif">
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
