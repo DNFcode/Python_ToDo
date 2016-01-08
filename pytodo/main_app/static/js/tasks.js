@@ -10,7 +10,7 @@ html = {
         '</div>',
 
     new_task:
-        '<div class="task-item">'+
+        '<div class="task-item editable">'+
             '<div class="task-title"></div>'+
             '<div class="task-date"></div>'+
 
@@ -484,9 +484,10 @@ $(document).ready(function(){
             taskTitle = $(this).find(".task-title").text();
             $("#list-title").val(taskTitle);
             $(".edit-head .task-date").text($(".task-item.active .task-date").text());
-            $("#list-title").prop('disabled', false);
+            $("#list-title").prop('readonly', false);
             $(".add-task").show();
             if (!$(this).hasClass("editable")){
+                $(".edit-window .delete-icon").hide();
                 $(".add-task").hide();
                 $(".edit-window .task-descr").attr("contenteditable", "false");
                 $("#list-title").prop('readonly', true);
@@ -634,15 +635,17 @@ $(document).ready(function(){
 
     //Выполненные таски
     $(".edit-container .tasks").on("click", ".icon", function(){
-        $(this).removeClass('fa-square-o');
-        $(this).addClass('fa-check-square-o');
+        if($(".task-item.active").hasClass("editable")) {
+            $(this).removeClass('fa-square-o');
+            $(this).addClass('fa-check-square-o');
 
-        task_done = $(this).parent();
-        $('.edit-container .tasks-done').append(task_done);
+            task_done = $(this).parent();
+            $('.edit-container .tasks-done').append(task_done);
 
-        refresh_active()
+            refresh_active();
 
-        show_visible_tasks();
+            show_visible_tasks();
+        }
     });
 
     //Убрать таск из выполненных
